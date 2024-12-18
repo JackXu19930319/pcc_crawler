@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "pcc-crawler"
+version = "0.1.0"
+description = ""
+authors = ["JackXu19930319 <49975224+JackXu19930319@users.noreply.github.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "3.12.0"
+requests = "^2.32.3"
+sqlalchemy = "^2.0.36"
+openpyxl = "^3.1.5"
+bs4 = "^0.0.2"
+fake-useragent = "^2.0.3"
+selenium = "^4.27.1"
+webdriver-manager = "^4.0.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
