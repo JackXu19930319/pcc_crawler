@@ -13,6 +13,7 @@ from multiprocessing import Process
 if not os.path.exists('logs'):
     os.makedirs('logs')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', handlers=[logging.FileHandler("logs/item_crawler.log"), logging.StreamHandler()])
+logging.getLogger('scrapy').propagate = False
 
 LINE_NOTIFY_TOKEN = 'xy8yFMWomqTqk8qOi8DdpSY6AII3UWuSfdtdIq667Ye'
 
@@ -66,6 +67,7 @@ class ItemSpider(scrapy.Spider):
 
     def start_requests(self):
         urls = session.query(ItemUrls).filter(ItemUrls.is_crawled == 0).all()
+        logging.info(f"共有 {len(urls)} 筆資料需要爬取")
         for item in urls:
             yield scrapy.Request(url=item.url, callback=self.parse, meta={'item_id': item.id})
 
@@ -106,13 +108,9 @@ class ItemSpider(scrapy.Spider):
 def run_crawler():
     process = CrawlerProcess(
         settings={
-            "FEEDS": {
-                "items.json": {
-                    "format": "json"
-                },  # 輸出文件格式
-            },
             "USER_AGENT": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3",  # 設定 User-Agent
             "ROBOTSTXT_OBEY": False,  # 是否遵守 robots.txt 規則
+            "LOG_ENABLED": False,  # 禁用日誌
             "LOG_LEVEL": "CRITICAL",  # 設定日誌級別為 CRITICAL
             "DOWNLOAD_DELAY": 20,  # 下載延遲時間（秒）
             "CONCURRENT_REQUESTS": 3,  # 最大併發請求數
@@ -124,12 +122,13 @@ def run_crawler():
     process.crawl(ItemSpider)
     process.start()
 
+
 if __name__ == "__main__":
     while True:
         p = Process(target=run_crawler)
         p.start()
         p.join()
-        
+
         # 等待一段時間再重新開始
         logging.info("等待重新開始...")
-        time.sleep(120)  # 等待一小時
+        time.sleep(10)  # 等待一小時

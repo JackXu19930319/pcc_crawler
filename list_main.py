@@ -154,6 +154,7 @@ def run_list_crawler():
                                  case_deadline=data.case_deadline)
             # 先確認有無重複url
             if session.query(ItemUrls).filter(ItemUrls.url == data.url).first() is None:
+                logging.info(f"新增資料 {data.url}")
                 session.add(item_urls)
         keyword_update = session.query(KeywordTask).filter(KeywordTask.id == keyword.id).first()
         keyword_update.is_crawled = 1
