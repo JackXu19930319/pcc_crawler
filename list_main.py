@@ -8,11 +8,16 @@ import requests
 from db_manager import session, KeywordTask, ItemUrls
 from fake_useragent import UserAgent
 from bs4 import BeautifulSoup
+from multiprocessing import Process
 
 from datetime import datetime
 
 # 設定 logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', handlers=[logging.FileHandler("list_crawler.log"), logging.StreamHandler()])
+log_directory = os.path.join(os.getcwd(), 'logs')
+if not os.path.exists(log_directory):
+    os.makedirs(log_directory)
+log_file = os.path.join(log_directory, 'list_crawler.log')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', handlers=[logging.FileHandler(log_file), logging.StreamHandler()])
 
 
 def get_xlsm_files(directory):
@@ -74,7 +79,7 @@ class list_crawler:
                     dep_name = div.find_all("td")[2].text.replace('\n', '').strip()
                     case_no = div.find_all("td")[3].text.replace('\n', '').strip()
                     case_date = div.find_all("td")[4].text.replace('\n', '').strip()
-                    case_deadline = div.find_all("td")[5].text.replace('\n', '').strip()
+                    case_deadline = div.find_all("td")[6].text.replace('\n', '').strip()
 
                     # 將民國日期轉換為西元日期
                     year, month, day = map(int, case_date.split('/'))
@@ -102,7 +107,6 @@ class list_crawler:
                         case_deadline=case_deadline,
                         case_type=case_type)
                     detail_urls.append(item)
-
             detail_urls = list(dict.fromkeys(detail_urls))
 
             time.sleep(random.uniform(3, 5))
@@ -113,7 +117,7 @@ class list_crawler:
             return None
 
 
-if __name__ == '__main__':
+def run_list_crawler():
     # 撈出所有keyword
     keywords = session.query(KeywordTask).filter(KeywordTask.is_crawled == 0).all()
     if len(keywords) == 0:
@@ -154,3 +158,13 @@ if __name__ == '__main__':
         keyword_update = session.query(KeywordTask).filter(KeywordTask.id == keyword.id).first()
         keyword_update.is_crawled = 1
         session.commit()
+
+if __name__ == '__main__':
+    while True:
+        p = Process(target=run_list_crawler)
+        p.start()
+        p.join()
+        
+        # 等待一段時間再重新開始
+        logging.info("等待重新開始...")
+        time.sleep(3600)  # 等待一小時

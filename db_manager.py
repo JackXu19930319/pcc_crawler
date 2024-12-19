@@ -47,15 +47,15 @@ Base.metadata.create_all(engine)
 
 
 # 新增資料
-def add_url(url, create_at):
-    item_urls = ItemUrls(url=url, create_at=create_at)
-    session.add(item_urls)
-    session.commit()
+# def add_url(url, create_at):
+#     item_urls = ItemUrls(url=url, create_at=create_at)
+#     session.add(item_urls)
+#     session.commit()
 
 
-# # 查詢資料
-def get_urls():
-    return session.query(ItemUrls).all()
+# # # 查詢資料
+# def get_urls():
+#     return session.query(ItemUrls).all()
 
 
 # # 更新資料
