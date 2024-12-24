@@ -1,13 +1,11 @@
 from db_manager import session, ItemUrls
-import scrapy
 import logging
 import os
 from bs4 import BeautifulSoup
-from scrapy.crawler import CrawlerProcess
 import requests
 import pandas as pd
 import time
-from multiprocessing import Process
+import random
 
 # 設定 logging
 if not os.path.exists('logs'):
@@ -62,32 +60,24 @@ def save_to_excel(items):
     df.to_excel("crawled_items.xlsx", index=False)
 
 
-class ItemSpider(scrapy.Spider):
-    name = "item_spider"
-
-    def start_requests(self):
-        urls = session.query(ItemUrls).filter(ItemUrls.is_crawled == 0).all()
-        logging.info(f"共有 {len(urls)} 筆資料需要爬取")
-        for item in urls:
-            yield scrapy.Request(url=item.url, callback=self.parse, meta={'item_id': item.id})
-
-    def parse(self, response):
-        logging.info(f"正在爬取 {response.url}")
-        item_id = response.meta['item_id']
+def execute():
+    urls = session.query(ItemUrls).filter(ItemUrls.is_crawled == 0).all()
+    logging.info(f"共有 {len(urls)} 筆資料需要爬取")
+    for item in urls:
+        logging.info(f"正在爬取 {item.url}")
+        item_id = item.id
         item_obj = session.query(ItemUrls).filter(ItemUrls.id == item_id).first()
-        item_obj = get_data(response.body, item_obj)
+        page = requests.get(item.url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'})
+        item_obj = get_data(page.text, item_obj)
         if item_obj.award_method is None or item_obj.award_method is None or item_obj.bid_opening_time is None:
             item_obj.is_crawled = 2
         else:
             item_obj.is_crawled = 1
         session.commit()
         if item_obj.is_crawled == 1:
-            logging.info(f"爬取完成 {response.url}")
-        else:
-            logging.info(f"******* 爬取失敗 {response.url}")
-
-        # 傳送 Line Notify 訊息
-        msg = f"""
+            logging.info(f"爬取完成 {item.url}")
+            # 傳送 Line Notify 訊息
+            msg = f"""
 公告日: {item_obj.case_date}
 機關名稱: {item_obj.dep_name}
 標的分類: {item_obj.category}
@@ -98,37 +88,20 @@ class ItemSpider(scrapy.Spider):
 開標時間: {item_obj.bid_opening_time}
 網站網址: {item_obj.url}
         """
-        send_line_notify(msg)
-
-        # 將資料寫入 Excel
-        crawled_items = session.query(ItemUrls).filter(ItemUrls.is_crawled == 1).all()
-        save_to_excel(crawled_items)
-
-
-def run_crawler():
-    process = CrawlerProcess(
-        settings={
-            "USER_AGENT": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3",  # 設定 User-Agent
-            "ROBOTSTXT_OBEY": False,  # 是否遵守 robots.txt 規則
-            "LOG_ENABLED": False,  # 禁用日誌
-            "LOG_LEVEL": "CRITICAL",  # 設定日誌級別為 CRITICAL
-            "DOWNLOAD_DELAY": 20,  # 下載延遲時間（秒）
-            "CONCURRENT_REQUESTS": 3,  # 最大併發請求數
-            "COOKIES_ENABLED": False,  # 是否啟用 Cookies
-            "TELNETCONSOLE_ENABLED": False,  # 是否啟用 Telnet 控制台
-            # 其他設定選項可以參考 Scrapy 官方文件
-        })
-
-    process.crawl(ItemSpider)
-    process.start()
+            send_line_notify(msg)
+            # 將資料寫入 Excel
+            crawled_items = session.query(ItemUrls).filter(ItemUrls.is_crawled == 1).all()
+            save_to_excel(crawled_items)
+        else:
+            logging.info(f"******* 爬取失敗 {item.url}")
 
 
 if __name__ == "__main__":
     while True:
-        p = Process(target=run_crawler)
-        p.start()
-        p.join()
-
-        # 等待一段時間再重新開始
-        logging.info("等待重新開始...")
-        time.sleep(10)  # 等待一小時
+        try:
+            execute()
+        except Exception as e:
+            logging.error(f"發生錯誤: {e}")
+        finally:
+            logging.info("等待中...")
+            time.sleep(random.uniform(60, 120))

@@ -6,9 +6,7 @@ import time
 import sys
 import requests
 from db_manager import session, KeywordTask, ItemUrls
-from fake_useragent import UserAgent
 from bs4 import BeautifulSoup
-from multiprocessing import Process
 
 from datetime import datetime
 
@@ -34,7 +32,8 @@ class list_crawler:
 
     def get_list(self) -> list[ItemUrls]:
         res = []
-        self.s.get("https://web.pcc.gov.tw/prkms/tender/common/bulletion/readBulletion", headers={"User-Agent": UserAgent().random})
+        self.s.get("https://web.pcc.gov.tw/prkms/tender/common/bulletion/readBulletion",
+                   headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"})
         time.sleep(random.uniform(3, 5))
         for page in range(1, self.max_page + 1):
             querySentence = self.keyword
@@ -160,12 +159,11 @@ def run_list_crawler():
         keyword_update.is_crawled = 1
         session.commit()
 
+
 if __name__ == '__main__':
     while True:
-        p = Process(target=run_list_crawler)
-        p.start()
-        p.join()
-        
-        # 等待一段時間再重新開始
-        logging.info("等待重新開始...")
-        time.sleep(3600)  # 等待一小時
+        try:
+            run_list_crawler()
+        except Exception as e:
+            logging.error(f"錯誤發生：\n{str(e)}")
+        time.sleep(60 * 60)
