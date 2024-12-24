@@ -94,6 +94,7 @@ def execute():
             save_to_excel(crawled_items)
         else:
             logging.info(f"******* 爬取失敗 {item.url}")
+        time.sleep(random.randint(88, 180))
 
 
 if __name__ == "__main__":
@@ -103,5 +104,4 @@ if __name__ == "__main__":
         except Exception as e:
             logging.error(f"發生錯誤: {e}")
         finally:
-            logging.info("等待中...")
-            time.sleep(random.uniform(60, 120))
+            time.sleep(60 * 10)
