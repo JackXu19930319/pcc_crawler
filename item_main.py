@@ -1,4 +1,4 @@
-from db_manager import session, ItemUrls
+import db_manager
 import scrapy
 import logging
 import os
@@ -25,6 +25,22 @@ def send_line_notify(message):
     # 以 requests 發送 POST 請求
     requests.post("https://notify-api.line.me/api/notify", headers=headers, data=data)
     print('傳送訊息： %s' % (message))
+
+
+class ItemUrls:
+    def __init__(self, url, create_at, keyword_task_id, dep_name, case_date, case_deadline, case_type, category=None, budget_amount=None, award_method=None, bid_opening_time=None, case_name=None):
+        self.url = url
+        self.create_at = create_at
+        self.keyword_task_id = keyword_task_id
+        self.dep_name = dep_name
+        self.case_date = case_date
+        self.case_deadline = case_deadline
+        self.case_type = case_type
+        self.category = category
+        self.budget_amount = budget_amount
+        self.award_method = award_method
+        self.bid_opening_time = bid_opening_time
+        self.case_name = case_name
 
 
 def get_data(page, item_obj: ItemUrls) -> ItemUrls:
@@ -66,21 +82,20 @@ class ItemSpider(scrapy.Spider):
     name = "item_spider"
 
     def start_requests(self):
-        urls = session.query(ItemUrls).filter(ItemUrls.is_crawled == 0).all()
+        urls = db_manager.get_uncrawled_item_urls()
         logging.info(f"共有 {len(urls)} 筆資料需要爬取")
         for item in urls:
-            yield scrapy.Request(url=item.url, callback=self.parse, meta={'item_id': item.id})
+            yield scrapy.Request(url=item[1], callback=self.parse, meta={'item_id': item[0]})
 
     def parse(self, response):
         logging.info(f"正在爬取 {response.url}")
         item_id = response.meta['item_id']
-        item_obj = session.query(ItemUrls).filter(ItemUrls.id == item_id).first()
+        item_obj = db_manager.get_item_by_id(item_id)
         item_obj = get_data(response.body, item_obj)
         if item_obj.award_method is None or item_obj.award_method is None or item_obj.bid_opening_time is None:
-            item_obj.is_crawled = 2
+            db_manager.mark_item_as_crawled(item_id, 2)
         else:
-            item_obj.is_crawled = 1
-        session.commit()
+            db_manager.mark_item_as_crawled(item_id, 1)
         if item_obj.is_crawled == 1:
             logging.info(f"爬取完成 {response.url}")
         else:
@@ -101,7 +116,7 @@ class ItemSpider(scrapy.Spider):
         send_line_notify(msg)
 
         # 將資料寫入 Excel
-        crawled_items = session.query(ItemUrls).filter(ItemUrls.is_crawled == 1).all()
+        crawled_items = db_manager.get_crawled_items()
         save_to_excel(crawled_items)
 
 
