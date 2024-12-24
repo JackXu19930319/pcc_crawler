@@ -1,64 +1,76 @@
-import sqlite3
-from datetime import datetime
+from sqlalchemy import ForeignKey, create_engine, Column, Integer, String, DateTime
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
-# 建立資料庫連線
-conn = sqlite3.connect('example.db')
-cursor = conn.cursor()
+# 建立資料庫引擎
+engine = create_engine('sqlite:///example.db', echo=False)
+
+# 建立基礎類別
+Base = declarative_base()
+
+
+class KeywordTask(Base):
+    __tablename__ = 'keyword_task'
+    id = Column(Integer, primary_key=True)
+    keyword = Column(String)
+    create_at = Column(DateTime)
+    is_crawled = Column(Integer, default=0)  # 0: 未爬取, 1: 已爬取 2: 爬取失敗
+
+
+# 定義資料表
+class ItemUrls(Base):
+    __tablename__ = 'item_urls'
+    id = Column(Integer, primary_key=True)
+    url = Column(String)
+    create_at = Column(DateTime)
+    is_crawled = Column(Integer, default=0)  # 0: 未爬取, 1: 已爬取 2: 爬取失敗
+    keyword_task_id = Column(Integer, ForeignKey('keyword_task.id'))
+    case_type = Column(String, default='招標公告')  # list: 列表頁, detail: 詳細頁
+    dep_name = Column(String)  # 機關名稱
+    case_name = Column(String)  # 案件名稱
+    case_date = Column(String)  # 案件日期 110/01/01
+    case_deadline = Column(String)  # 案件截止日期 110/01/01
+    category = Column(String)  # 標的分類
+    budget_amount = Column(String)  # 預算金額
+    award_method = Column(String)  # 決標方式
+    bid_opening_time = Column(String)  # 開標時間
+
 
 # 建立資料表
-cursor.execute('''
-CREATE TABLE IF NOT EXISTS keyword_task (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    keyword TEXT,
-    create_at TEXT,
-    is_crawled INTEGER DEFAULT 0
-)
-''')
+# def create_tables():
 
-cursor.execute('''
-CREATE TABLE IF NOT EXISTS item_urls (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    url TEXT,
-    create_at TEXT,
-    is_crawled INTEGER DEFAULT 0,
-    keyword_task_id INTEGER,
-    case_type TEXT DEFAULT '招標公告',
-    dep_name TEXT,
-    case_name TEXT,
-    case_date TEXT,
-    case_deadline TEXT,
-    category TEXT,
-    budget_amount TEXT,
-    award_method TEXT,
-    bid_opening_time TEXT
-)
-''')
+# 建立 Session 類別
+Session = sessionmaker(bind=engine)
+session = Session()
 
-conn.commit()
+Base.metadata.create_all(engine)
 
-def add_keyword_task(keyword):
-    cursor.execute('INSERT INTO keyword_task (keyword, create_at) VALUES (?, ?)', (keyword, datetime.now()))
-    conn.commit()
 
-def get_uncrawled_keywords():
-    cursor.execute('SELECT * FROM keyword_task WHERE is_crawled = 0')
-    return cursor.fetchall()
+# 新增資料
+# def add_url(url, create_at):
+#     item_urls = ItemUrls(url=url, create_at=create_at)
+#     session.add(item_urls)
+#     session.commit()
 
-def mark_keyword_as_crawled(keyword_id):
-    cursor.execute('UPDATE keyword_task SET is_crawled = 1 WHERE id = ?', (keyword_id,))
-    conn.commit()
 
-def add_item_url(item):
-    cursor.execute('''
-    INSERT INTO item_urls (url, create_at, is_crawled, keyword_task_id, case_type, dep_name, case_name, case_date, case_deadline, category, budget_amount, award_method, bid_opening_time)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (item['url'], datetime.now(), 0, item['keyword_task_id'], item['case_type'], item['dep_name'], item['case_name'], item['case_date'], item['case_deadline'], item['category'], item['budget_amount'], item['award_method'], item['bid_opening_time']))
-    conn.commit()
+# # # 查詢資料
+# def get_urls():
+#     return session.query(ItemUrls).all()
 
-def get_uncrawled_item_urls():
-    cursor.execute('SELECT * FROM item_urls WHERE is_crawled = 0')
-    return cursor.fetchall()
 
-def mark_item_as_crawled(item_id, status):
-    cursor.execute('UPDATE item_urls SET is_crawled = ? WHERE id = ?', (status, item_id))
-    conn.commit()
+# # 更新資料
+# def update_user(user_id, name=None, age=None):
+#     user = session.query(User).filter(User.id == user_id).first()
+#     if user:
+#         if name:
+#             user.name = name
+#         if age:
+#             user.age = age
+#         session.commit()
+
+# # 刪除資料
+# def delete_user(user_id):
+#     user = session.query(User).filter(User.id == user_id).first()
+#     if user:
+#         session.delete(user)
+#         session.commit()

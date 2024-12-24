@@ -5,7 +5,7 @@ import random
 import time
 import sys
 import requests
-import db_manager
+from db_manager import session, KeywordTask, ItemUrls
 from fake_useragent import UserAgent
 from bs4 import BeautifulSoup
 from multiprocessing import Process
@@ -23,16 +23,6 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 def get_xlsm_files(directory):
     return [f for f in os.listdir(directory) if f.endswith('.xlsm')]
 
-
-class ItemUrls:
-    def __init__(self, url, create_at, keyword_task_id, dep_name, case_date, case_deadline, case_type):
-        self.url = url
-        self.create_at = create_at
-        self.keyword_task_id = keyword_task_id
-        self.dep_name = dep_name
-        self.case_date = case_date
-        self.case_deadline = case_deadline
-        self.case_type = case_type
 
 class list_crawler:
 
@@ -129,43 +119,46 @@ class list_crawler:
 
 def run_list_crawler():
     # 撈出所有keyword
-    keywords = db_manager.get_uncrawled_keywords()
+    keywords = session.query(KeywordTask).filter(KeywordTask.is_crawled == 0).all()
     if len(keywords) == 0:
         # 刪除目前keyword_task資料表所有資料
-        db_manager.cursor.execute('DELETE FROM keyword_task')
+        session.query(KeywordTask).delete()
         directory = 'doc/'  # 指定目錄
         xlsm_files = get_xlsm_files(directory)
         for file_name in xlsm_files:
             logging.info(f'Processing {file_name}...')
             bid_names = excel_tool.read_xlsm(f'{directory}/{file_name}')
             for b in bid_names:
-                db_manager.add_keyword_task(b)
+                keyword_task = KeywordTask(keyword=b, create_at=datetime.now())
+                # 確認有無重複以及 is_crawled 是否為 0
+                if session.query(KeywordTask).filter(KeywordTask.keyword == b, KeywordTask.is_crawled == 0).first() is None:
+                    session.add(keyword_task)
+                session.commit()
 
     # 撈出所有keyword
-    keywords = db_manager.get_uncrawled_keywords()
+    keywords = session.query(KeywordTask).filter(KeywordTask.is_crawled == 0).all()
     for keyword in keywords:
-        logging.info(f'Processing {keyword[1]}...')
+        logging.info(f'Processing {keyword.keyword}...')
         # 取得中國年度字串 ex: 110
         current_year = datetime.now().year
         chinese_year = current_year - 1911
-        crawler = list_crawler(keyword=keyword[1], timeRange=chinese_year)
+        crawler = list_crawler(keyword=keyword.keyword, timeRange=chinese_year)
         list_datas = crawler.get_list()
         for data in list_datas:
-            item = {
-                'url': data.url,
-                'keyword_task_id': keyword[0],
-                'case_type': data.case_type,
-                'dep_name': data.dep_name,
-                'case_name': data.case_name,
-                'case_date': data.case_date,
-                'case_deadline': data.case_deadline,
-                'category': data.category,
-                'budget_amount': data.budget_amount,
-                'award_method': data.award_method,
-                'bid_opening_time': data.bid_opening_time
-            }
-            db_manager.add_item_url(item)
-        db_manager.mark_keyword_as_crawled(keyword[0])
+            item_urls = ItemUrls(url=data.url,
+                                 create_at=datetime.now(),
+                                 keyword_task_id=keyword.id,
+                                 dep_name=data.dep_name,
+                                 case_name=data.case_name,
+                                 case_date=data.case_date,
+                                 case_deadline=data.case_deadline)
+            # 先確認有無重複url
+            if session.query(ItemUrls).filter(ItemUrls.url == data.url).first() is None:
+                logging.info(f"新增資料 {data.url}")
+                session.add(item_urls)
+        keyword_update = session.query(KeywordTask).filter(KeywordTask.id == keyword.id).first()
+        keyword_update.is_crawled = 1
+        session.commit()
 
 if __name__ == '__main__':
     while True:
