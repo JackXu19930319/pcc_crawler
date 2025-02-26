@@ -12,6 +12,9 @@ bs4 = "^0.0.2"
 pandas = "^2.2.3"
 sqlalchemy = "^2.0.36"
 openpyxl = "^3.1.5"
+psycopg2-binary = "^2.9.10"
+python-dotenv = "^1.0.1"
+schedule = "^1.2.2"
 
 
 [build-system]
