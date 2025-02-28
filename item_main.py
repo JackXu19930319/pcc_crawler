@@ -6,7 +6,7 @@ import requests
 import pandas as pd
 import time
 import random
-
+from datetime import datetime
 # 設定 logging
 if not os.path.exists('logs'):
     os.makedirs('logs')
@@ -103,9 +103,10 @@ def execute():
 
 if __name__ == "__main__":
     while True:
+        print(f'{datetime.now()}')
         try:
             execute()
         except Exception as e:
             logging.error(f"發生錯誤: {e}")
         finally:
-            time.sleep(60 * 10)
+            time.sleep(10)

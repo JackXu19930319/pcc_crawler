@@ -122,7 +122,7 @@ class list_crawler:
                     item = ItemUrls(
                         url=full_url,
                         create_at=datetime.now(),
-                        keyword_task_id=1,  # 後續會依據實際 keyword.id 更新
+                        # keyword_task_id=1,  # 後續會依據實際 keyword.id 更新
                         dep_name=dep_name,
                         case_date=case_date,
                         case_deadline=case_deadline,
@@ -176,7 +176,7 @@ def run_list_crawler():
                     item_urls = ItemUrls(
                         url=data.url,
                         create_at=datetime.now(),
-                        keyword_task_id=keyword.id,
+                        # keyword_task_id=keyword.id,
                         dep_name=data.dep_name,
                         case_name=getattr(data, "case_name", None),  # 如果 case_name 有可能不存在
                         case_date=data.case_date,

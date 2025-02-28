@@ -4,6 +4,7 @@ from sqlalchemy.orm import sessionmaker
 import psycopg2
 import os
 import dotenv
+import datetime
 
 dotenv.load_dotenv()
 
@@ -26,10 +27,10 @@ class KeywordTask(Base):
 class ItemUrls(Base):
     __tablename__ = 'pcc_crawler_item_urls'
     id = Column(Integer, primary_key=True)
-    url = Column(String)
-    create_at = Column(DateTime)
+    url = Column(String, unique=True)
+    create_at = Column(DateTime, default=datetime.datetime.now)
     is_crawled = Column(Integer, default=0)  # 0: 未爬取, 1: 已爬取 2: 爬取失敗
-    keyword_task_id = Column(Integer, ForeignKey('pcc_crawler_keyword_task.id'))
+    # keyword_task_id = Column(Integer, ForeignKey('pcc_crawler_keyword_task.id'))
     case_type = Column(String, default='招標公告')  # list: 列表頁, detail: 詳細頁
     dep_name = Column(String)  # 機關名稱
     case_name = Column(String)  # 案件名稱
