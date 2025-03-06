@@ -6,3 +6,4 @@
 crawled_items.xlsx
 items.json
 test/*
+.env
