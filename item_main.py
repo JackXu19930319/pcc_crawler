@@ -7,6 +7,7 @@ import pandas as pd
 import time
 import random
 from datetime import datetime
+from tg_send_tool import send_telegram_message
 # 設定 logging
 if not os.path.exists('logs'):
     os.makedirs('logs')
@@ -16,13 +17,13 @@ logging.getLogger('scrapy').propagate = False
 LINE_NOTIFY_TOKEN = 'xy8yFMWomqTqk8qOi8DdpSY6AII3UWuSfdtdIq667Ye'
 
 
-def send_line_notify(message):
-    # HTTP 標頭參數與資料
-    headers = {"Authorization": "Bearer " + LINE_NOTIFY_TOKEN}
-    data = {'message': message}
-    # 以 requests 發送 POST 請求
-    requests.post("https://notify-api.line.me/api/notify", headers=headers, data=data)
-    print('傳送訊息： %s' % (message))
+# def send_line_notify(message):
+#     # HTTP 標頭參數與資料
+#     headers = {"Authorization": "Bearer " + LINE_NOTIFY_TOKEN}
+#     data = {'message': message}
+#     # 以 requests 發送 POST 請求
+#     requests.post("https://notify-api.line.me/api/notify", headers=headers, data=data)
+#     print('傳送訊息： %s' % (message))
 
 
 def get_data(page, item_obj: ItemUrls) -> ItemUrls:
@@ -95,7 +96,7 @@ def execute():
 開標時間: {item_obj.bid_opening_time}
 網站網址: {item_obj.url}
                     """
-                    send_line_notify(msg)
+                    send_telegram_message(msg)
                     # 將資料寫入 Excel
                     crawled_items = local_session.query(ItemUrls).filter(ItemUrls.is_crawled == 1).all()
                     save_to_excel(crawled_items)
