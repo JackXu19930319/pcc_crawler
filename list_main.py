@@ -199,5 +199,6 @@ if __name__ == '__main__':
             run_list_crawler()
         except Exception as e:
             logging.error(f"主要迴圈發生錯誤：{e}")
+            time.sleep(300)
         # 任務結束後等待一小時再執行下一次
         time.sleep(60 * 60)
